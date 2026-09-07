@@ -2096,9 +2096,13 @@ function renderDashboard() {
       header.textContent = group.name;
       nav.appendChild(header);
 
-      group.procs.forEach(({ proc, globalIdx }) => {
+      group.procs.forEach(({ proc, globalIdx }, localIdx) => {
         const isDone   = doneIds.has(proc.id);
-        const prevDone = globalIdx === 0 || doneIds.has(S.procs[globalIdx - 1].id);
+        // El desbloqueo es secuencial DENTRO de cada bloque (grupo), no a lo largo
+        // de toda la lista: así, el primer módulo de cada bloque (RRHH, Calidad,
+        // Higiene y Seguridad, etc.) queda habilitado aunque otro bloque distinto
+        // todavía no se haya completado.
+        const prevDone = localIdx === 0 || doneIds.has(group.procs[localIdx - 1].proc.id);
         const locked   = !isDone && !prevDone;
 
         const item = document.createElement('div');
