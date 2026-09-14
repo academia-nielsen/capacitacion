@@ -1151,6 +1151,72 @@ canvas#sig-canvas {
     </form>
 
     <p class="login-register-link">¿Primera vez? <a href="#" onclick="show('register');return false;">Crear mi cuenta</a></p>
+    <p class="login-register-link" style="margin-top:8px">¿Olvidaste tu contraseña? <a href="#" onclick="showForgot();return false;">Recuperarla</a></p>
+    <p class="login-footer">Plataforma interna · Uso exclusivo del personal Nielsen</p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     SCREEN: RECUPERAR CONTRASEÑA
+───────────────────────────────────────────────────── -->
+<div id="screen-forgot" class="screen">
+  <div class="login-left">
+    <img class="nielsen-logo-img" alt="Nielsen Logística y Expediciones S.A.">
+    <div>
+      <p class="login-eyebrow">Seguridad de cuenta · Grupo Nielsen</p>
+      <h1 class="login-hero-title">
+        Recuperá<br>
+        tu acceso.
+      </h1>
+      <p class="login-hero-desc">Te enviaremos un código de verificación a tu email para que puedas establecer una nueva contraseña de forma segura.</p>
+    </div>
+    <div class="login-ticker">
+      <div class="login-ticker-track">
+        <span class="login-ticker-seg">SEGURIDAD VIAL · PROTOCOLO DE INGRESO · GARITA · CHOFER · CATERING · EVALUACIÓN TEÓRICA · FIRMA DIGITAL · CAPACITACIÓN NIELSEN · </span>
+        <span class="login-ticker-seg">SEGURIDAD VIAL · PROTOCOLO DE INGRESO · GARITA · CHOFER · CATERING · EVALUACIÓN TEÓRICA · FIRMA DIGITAL · CAPACITACIÓN NIELSEN · </span>
+      </div>
+    </div>
+  </div>
+  <div class="login-right">
+    <p class="login-form-eyebrow">Plataforma interna</p>
+    <h2 class="login-form-title">Recuperar contraseña</h2>
+
+    <!-- Paso 1: Email -->
+    <div id="forgot-step1">
+      <p class="login-form-sub">Ingresá tu email y te enviaremos un código de 6 dígitos</p>
+      <form id="forgot-form" onsubmit="handleForgotRequest(event)">
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input class="field-input" type="email" id="fp-email" placeholder="tu@email.com" required autocomplete="email">
+        </div>
+        <div id="forgot-err" class="login-error"></div>
+        <button class="btn btn-or" type="submit" id="forgot-btn" style="width:100%">Enviar código →</button>
+      </form>
+    </div>
+
+    <!-- Paso 2: Código + nueva contraseña (oculto inicialmente) -->
+    <div id="forgot-step2" style="display:none">
+      <p class="login-form-sub">Revisá tu email e ingresá el código de 6 dígitos junto con tu nueva contraseña</p>
+      <form id="reset-form" onsubmit="handleResetPassword(event)">
+        <div class="field">
+          <label class="field-label">Código de verificación</label>
+          <input class="field-input" type="text" id="fp-code" placeholder="123456" required maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:6px;font-size:20px;font-weight:700;text-align:center">
+        </div>
+        <div class="field">
+          <label class="field-label">Nueva contraseña</label>
+          <input class="field-input" type="password" id="fp-newpass" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label class="field-label">Confirmar nueva contraseña</label>
+          <input class="field-input" type="password" id="fp-newpass2" placeholder="••••••••" required autocomplete="new-password">
+        </div>
+        <div id="reset-err" class="login-error"></div>
+        <button class="btn btn-or" type="submit" id="reset-btn" style="width:100%">Cambiar contraseña →</button>
+      </form>
+      <p class="login-register-link" style="margin-top:12px">¿No te llegó el código? <a href="#" onclick="resetForgotStep1();return false;">Reenviar</a></p>
+    </div>
+
+    <p class="login-register-link" style="margin-top:16px"><a href="#" onclick="show('login');return false;">← Volver al inicio de sesión</a></p>
     <p class="login-footer">Plataforma interna · Uso exclusivo del personal Nielsen</p>
   </div>
 </div>
@@ -1925,6 +1991,94 @@ function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
   window.scrollTo(0, 0);
+}
+
+// ─────────────────────────────────────────────────────
+// RECUPERAR CONTRASEÑA
+// ─────────────────────────────────────────────────────
+function showForgot() {
+  resetForgotStep1();
+  show('forgot');
+}
+
+function resetForgotStep1() {
+  document.getElementById('forgot-step1').style.display = '';
+  document.getElementById('forgot-step2').style.display = 'none';
+  document.getElementById('forgot-form').reset();
+  document.getElementById('reset-form').reset();
+  document.getElementById('forgot-err').classList.remove('show');
+  document.getElementById('reset-err').classList.remove('show');
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = false;
+  btn.textContent = 'Enviar código →';
+}
+
+async function handleForgotRequest(event) {
+  event.preventDefault();
+  const email = document.getElementById('fp-email').value.trim();
+  const btn   = document.getElementById('forgot-btn');
+  const err   = document.getElementById('forgot-err');
+
+  err.classList.remove('show');
+  btn.disabled    = true;
+  btn.innerHTML   = '<span class="spinner"></span>';
+
+  try {
+    const res  = await fetch(`${GAS_URL}?action=requestReset&email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'No se pudo enviar el código.');
+
+    // Mostrar paso 2
+    document.getElementById('forgot-step1').style.display = 'none';
+    document.getElementById('forgot-step2').style.display = '';
+    setTimeout(() => document.getElementById('fp-code').focus(), 100);
+  } catch(ex) {
+    err.textContent = ex.message;
+    err.classList.add('show');
+    btn.disabled    = false;
+    btn.textContent = 'Enviar código →';
+  }
+}
+
+async function handleResetPassword(event) {
+  event.preventDefault();
+  const email    = document.getElementById('fp-email').value.trim();
+  const code     = document.getElementById('fp-code').value.trim();
+  const newPass  = document.getElementById('fp-newpass').value;
+  const newPass2 = document.getElementById('fp-newpass2').value;
+  const err      = document.getElementById('reset-err');
+  const btn      = document.getElementById('reset-btn');
+
+  err.classList.remove('show');
+
+  if (newPass !== newPass2) {
+    err.textContent = 'Las contraseñas no coinciden.';
+    err.classList.add('show');
+    return;
+  }
+  if (newPass.length < 6) {
+    err.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    err.classList.add('show');
+    return;
+  }
+
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const res  = await fetch(`${GAS_URL}?action=resetPassword&email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}&newPassword=${encodeURIComponent(newPass)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'No se pudo cambiar la contraseña.');
+
+    toast('✓ Contraseña cambiada. Ya podés iniciar sesión con tu nueva contraseña.', 'ok');
+    show('login');
+    resetForgotStep1();
+  } catch(ex) {
+    err.textContent = ex.message;
+    err.classList.add('show');
+    btn.disabled    = false;
+    btn.textContent = 'Cambiar contraseña →';
+  }
 }
 
 function showPhase(id) {
